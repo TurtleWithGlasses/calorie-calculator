@@ -40,7 +40,7 @@ def add_meal_row(scroll_frame, row_counter):
 # main window
 root = tk.Tk()
 root.title("Meal Calorie Tracher")
-root.geometry("550x1200")
+root.geometry("410x1200")
 
 # top section of date selection and add meal button
 top_frame = tk.Frame(root)
@@ -79,7 +79,7 @@ def create_meal_frame(root, frame_title):
     frame_title_label.grid(row=0, column=0, columnspan=4, pady=10)
 
     meal_input_frame = tk.Frame(scroll_frame)
-    meal_input_frame.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
+    meal_input_frame.grid(row=1, column=0, columnspan=4, padx=20, pady=5)
 
     tk.Label(meal_input_frame, text="Meal").grid(row=0, column=0)
     tk.Label(meal_input_frame, text="Quantity").grid(row=0, column=1)
@@ -107,6 +107,12 @@ def create_meal_frame(root, frame_title):
 frame1, meal_input_frame1, button_frame1 = create_meal_frame(root, "09:00 AM - 12:00 PM")
 frame2, meal_input_frame2, button_frame2 = create_meal_frame(root, "12:00 PM - 06:00 PM")
 frame3, meal_input_frame3, button_frame3 = create_meal_frame(root, "06:00 PM - 12:00 AM")
+
+frame4 = tk.Frame(root)
+frame4.pack(fill=tk.X, padx=5, pady=5)
+
+total_calories_label = tk.Label(frame4, text="Calculation of total Calories You Get Today: 0", font=("Arial", 12))
+total_calories_label.pack()
 
 
 
