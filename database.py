@@ -27,6 +27,8 @@ def fetch_meal_data():
     cursor.execute("SELECT name, calories FROM meals")
     data = cursor.fetchall()
     conn.close()
+    
+    print(f"Fetched meal data: {data}")  # Debug print to show the meal data fetched
     return data
 
 # Get the calories of a meal from the database
@@ -36,7 +38,13 @@ def get_meal_calories(meal_name):
     cursor.execute("SELECT calories FROM meals WHERE name=?", (meal_name,))
     result = cursor.fetchone()
     conn.close()
-    return result[0] if result else 0
+
+    if result:
+        print(f"Calories fetched for {meal_name}: {result[0]}")  # Debug print
+        return result[0]
+    else:
+        print(f"No calories found for {meal_name}")  # Debug print
+        return 0
 
 # Insert a new meal into the database
 def add_new_meal(name, calories):

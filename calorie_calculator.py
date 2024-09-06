@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from database import init_db, insert_meal_data, fetch_meal_data, get_meal_calories, add_new_meal
+from database import init_db, fetch_meal_data, get_meal_calories, add_new_meal
 
 # Function to reset the details (e.g., reset meal, quantity, and total cal)
 def reset_frame(frame):
@@ -17,29 +17,44 @@ def delete_meal_row(meal_row, frame, row_counter, total_calorie_label):
     row_counter[0] -= 1  # Decrement the row counter after deletion
     update_total_calories(frame, total_calorie_label)
 
-# Function to calculate total calories for all rows in a frame
 def update_total_calories(meal_input_frame, total_calorie_label):
     total_calories = 0
+    print("update_total_calories() triggered")  # Debug print
 
-    # Iterate through all children of the frame (rows)
-    for i in range(0, len(meal_input_frame.winfo_children()), 4):
-        meal_combobox = meal_input_frame.winfo_children()[i]
-        quantity_entry = meal_input_frame.winfo_children()[i+1]
-        calories_label = meal_input_frame.winfo_children()[i+2]
+    meal = None  # Initialize meal to None
+    quantity = None  # Initialize quantity to None
 
-        # Check if meal_combobox is a Combobox and quantity_entry is an Entry
-        if isinstance(meal_combobox, ttk.Combobox) and isinstance(quantity_entry, tk.Entry):
+    for child in meal_input_frame.winfo_children():
+        # Check if the widget is a Combobox for meal selection
+        if isinstance(child, ttk.Combobox):
+            meal_combobox = child
             meal = meal_combobox.get()
-            quantity = quantity_entry.get()
+            print(f"Meal selected: {meal}")  # Debug print
 
-            if meal and quantity.isdigit():  # Check if both meal and quantity are valid
-                meal_calories = get_meal_calories(meal)  # Fetch calories from DB
-                meal_cal = meal_calories * int(quantity)  # Calculate total for this meal
-                total_calories += meal_cal  # Add to the frame's total
-                calories_label.config(text=f"Total Calories: {meal_cal}")  # Display per-row total
+        # Check if the widget is an Entry for quantity input
+        if isinstance(child, tk.Entry):
+            quantity_entry = child
+            quantity = quantity_entry.get()
+            print(f"Quantity entered: {quantity}")  # Debug print
+
+        # After getting both meal and quantity, fetch the calories and update labels
+        if meal and quantity and quantity.isdigit():
+            meal_calories = get_meal_calories(meal)  # Fetch calories from DB
+            print(f"Calories fetched for {meal}: {meal_calories}")  # Debug print
+            meal_cal = meal_calories * int(quantity)  # Calculate total for this meal
+            total_calories += meal_cal  # Add to the frame's total
+
+            # Find the next label for the calorie count and update it
+            for next_widget in meal_input_frame.winfo_children():
+                if isinstance(next_widget, tk.Label) and "Total Calories" in next_widget.cget("text"):
+                    next_widget.config(text=f"Total Calories: {meal_cal}")  # Display per-row total
+                    break
 
     total_calorie_label.config(text=f"Total: {total_calories}")  # Update the total for the frame
     update_total_daily_calories()  # Update the total for the entire day
+
+
+
 
 # Function to calculate the total calories for the entire day across all frames
 def update_total_daily_calories():
@@ -69,8 +84,10 @@ def add_meal_row(scroll_frame, row_counter, total_calorie_label, meal_options):
     delete_btn.grid(row=row_counter[0], column=3, padx=5, pady=5)
 
     # Add event to update the total calories when the user enters the meal or quantity
-    meal_combobox.bind("<<ComboboxSelected>>", lambda e: update_total_calories(scroll_frame, total_calorie_label))
-    quantity_entry.bind("<KeyRelease>", lambda e: update_total_calories(scroll_frame, total_calorie_label))
+    meal_combobox.bind("<<ComboboxSelected>>", lambda e: print(f"Meal selected: {meal_combobox.get()}") or update_total_calories(scroll_frame, total_calorie_label))
+
+    quantity_entry.bind("<KeyRelease>", lambda e: print(f"Quantity entered: {quantity_entry.get()}") or update_total_calories(scroll_frame, total_calorie_label))
+
 
     # Increment row_counter for the next row
     row_counter[0] += 1
@@ -124,6 +141,7 @@ def refresh_meal_options():
     global meal_options
     meal_data = fetch_meal_data()  # Fetch updated meal data
     meal_options = [meal[0] for meal in meal_data]  # Extract just the meal names
+    print("Meal options loaded:", meal_options)  # Debugging line
     refresh_combo_boxes(meal_input_frame1)
     refresh_combo_boxes(meal_input_frame2)
     refresh_combo_boxes(meal_input_frame3)
