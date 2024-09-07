@@ -3,47 +3,64 @@ from tkinter import ttk, messagebox
 from database import init_db, fetch_meal_data, get_meal_calories, add_new_meal
 
 class MealSection:
-    def __init__(self, app, title, meal_options, row_counter):
-        self.app = app  # Reference to the main app
+    def __init__(self, root, title, meal_options, row_counter):
+        self.root = root
         self.title = title
         self.meal_options = meal_options
         self.row_counter = row_counter
         self.total_calories = 0
         self.meal_rows = []
-        self.selected_meal_calories = {}  # Store calories for selected meals
 
         # Create the section UI
         self.create_section()
 
     def create_section(self):
-        section_frame = tk.Frame(self.app.root)
+        # Create a frame with a thin border
+        section_frame = tk.Frame(self.root, bd=2, relief=tk.GROOVE)
         section_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        frame_title_label = tk.Label(section_frame, text=self.title)
+        # Canvas for scrollable content
+        canvas = tk.Canvas(section_frame)
+        canvas.pack(side=tk.LEFT, fill="both", expand=True)
+
+        # Scrollbar
+        scrollbar = tk.Scrollbar(section_frame, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill="y")
+
+        # Configure canvas scroll
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        self.inner_frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
+
+        frame_title_label = tk.Label(self.inner_frame, text=self.title)
         frame_title_label.grid(row=0, column=0, columnspan=4, pady=10)
 
-        self.meal_input_frame = tk.Frame(section_frame)
+        self.meal_input_frame = tk.Frame(self.inner_frame)
         self.meal_input_frame.grid(row=1, column=0, columnspan=4, padx=20, pady=5)
 
         tk.Label(self.meal_input_frame, text="Meal").grid(row=0, column=0)
         tk.Label(self.meal_input_frame, text="Quantity").grid(row=0, column=1)
         tk.Label(self.meal_input_frame, text="Total Calories").grid(row=0, column=2)
 
-        # Total calories label for the section
-        self.total_calorie_label = tk.Label(section_frame, text="Total: 0")
-        self.total_calorie_label.grid(row=2, column=3, sticky="e", padx=10)
-
         # Add initial meal rows
         for _ in range(3):
             self.add_meal_row()
 
-        # Buttons for the section
-        add_more_btn = tk.Button(section_frame, text="Add More", command=self.add_meal_row)
-        add_more_btn.grid(row=2, column=0, padx=10)
+        # Buttons and total in a separate frame (below meal entries)
+        button_frame = tk.Frame(self.inner_frame)
+        button_frame.grid(row=2, column=0, columnspan=4, pady=10)
 
-        reset_btn = tk.Button(section_frame, text="Reset", command=self.reset_section)
-        reset_btn.grid(row=2, column=1, padx=10)
+        # Total calories label for the section
+        self.total_calorie_label = tk.Label(button_frame, text="Total: 0")
+        self.total_calorie_label.pack(side=tk.RIGHT, padx=10)
 
+        add_more_btn = tk.Button(button_frame, text="Add More", command=self.add_meal_row)
+        add_more_btn.pack(side=tk.LEFT, padx=10)
+
+        reset_btn = tk.Button(button_frame, text="Reset", command=self.reset_section)
+        reset_btn.pack(side=tk.LEFT, padx=10)
 
     def add_meal_row(self):
         row_widgets = {}
@@ -91,7 +108,7 @@ class MealSection:
         meal = meal_combobox.get().strip()
         if meal:
             meal_calories = get_meal_calories(meal)
-            self.selected_meal_calories[meal] = meal_calories
+            selected_meal_calories[meal] = meal_calories
             print(f"Selected {meal}, Calories fetched: {meal_calories}")
 
     def update_total_calories(self, row_widgets=None):
@@ -104,8 +121,8 @@ class MealSection:
             meal = meal_combobox.get().strip()
             quantity = quantity_entry.get().strip()
 
-            if self.validate_meal_and_quantity(meal, quantity):
-                meal_cal = self.selected_meal_calories.get(meal, 0) * int(quantity)
+            if validate_meal_and_quantity(meal, quantity):
+                meal_cal = selected_meal_calories.get(meal, 0) * int(quantity)
                 calories_label.config(text=f"Total Calories: {meal_cal}")
                 self.total_calories += meal_cal
 
@@ -125,19 +142,10 @@ class MealSection:
         self.total_calorie_label.config(text="Total: 0")
 
     def update_total_daily_calories(self):
-        self.app.update_total_daily_calories()  # Call the app's method to update daily totals
-
-    def validate_meal_and_quantity(self, meal, quantity):
-        if not meal:
-            print("Meal is not selected or invalid")
-            return False
-        if not quantity.isdigit():
-            print("Quantity is not valid")
-            return False
-        print("Meals and quantity are valid.")
-        return True
+        self.root.update_total_daily_calories()
 
 
+#### Main Application Class
 class MealCalorieTrackerApp:
     def __init__(self, root):
         self.root = root
@@ -177,7 +185,7 @@ class MealCalorieTrackerApp:
 
     def create_section(self, title):
         row_counter = [1]  # Use list to allow mutability across methods
-        section = MealSection(self, title, self.meal_options, row_counter)
+        section = MealSection(self.root, title, self.meal_options, row_counter)
         self.sections.append(section)
 
     def update_total_daily_calories(self):
