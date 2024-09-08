@@ -2,6 +2,58 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database import init_db, fetch_meal_data, get_meal_calories, add_new_meal
 
+# Function to open the Add Meal window
+def open_add_meal_window(self):
+    # Create a new window
+    add_meal_window = tk.Toplevel(self.root)
+    add_meal_window.title("Add New Meal")
+    add_meal_window.geometry("300x200")
+
+    # Meal Name Label and Entry
+    tk.Label(add_meal_window, text="Meal Name:").pack(pady=5)
+    meal_name_entry = tk.Entry(add_meal_window)
+    meal_name_entry.pack(pady=5)
+
+    # Meal Calories Label and Entry
+    tk.Label(add_meal_window, text="Calories:").pack(pady=5)
+    meal_calories_entry = tk.Entry(add_meal_window)
+    meal_calories_entry.pack(pady=5)
+
+    # Save Button
+    def save_new_meal():
+        meal_name = meal_name_entry.get().strip()
+        meal_calories = meal_calories_entry.get().strip()
+
+        # Validate the inputs
+        if meal_name == "" or not meal_calories.isdigit():
+            messagebox.showerror("Input Error", "Please enter a valida meal name and calorie count.")
+            return
+        
+        # Add meal to the database
+        add_new_meal(meal_name, int(meal_calories)) #Assuming that we have a function that adds the meal to the database
+
+        # Update the combo boxes in the main app
+        self.refresh_meal_options()
+
+        # Close the add meal window
+        add_meal_window.destroy()
+    
+    save_button = tk.Button(add_meal_window, text="Save", command=save_new_meal)
+    save_button.pack(pady=10)
+
+# Function to refresh the meal options in combo boxes after adding a new meal
+def refresh_meal_options(self):
+    # Fetch the updated meal data
+    meal_data = fetch_meal_data()
+    self.meal_options = [meal[0] for meal in meal_data]  # Extract meal names
+
+    # Refresh the combo boxes for all sections
+    for section in self.sections:
+        section.meal_options = self.meal_options  # Update meal options in the section
+        section.refresh_combo_boxes()  # Call the method to refresh combo boxes
+
+
+
 # Validation function to check meal and quantity
 def validate_meal_and_quantity(meal, quantity):
     if not meal:
@@ -12,6 +64,7 @@ def validate_meal_and_quantity(meal, quantity):
         return False
     print("Meals and quantity are valid.")
     return True
+
 
 class MealSection:
     def __init__(self, app, root, title, meal_options, row_counter, selected_meal_calories):
@@ -162,6 +215,12 @@ class MealSection:
 
         self.total_calories = 0
         self.total_calorie_label.config(text="Total: 0")
+    
+    def refresh_combo_boxes(self):
+        """Refresh the meal options in the combo boxes for this section."""
+        for row in self.meal_rows:
+            meal_combobox = row['meal_combobox']
+            meal_combobox.config(values=self.meal_options)  # Update meal options
 
 
 class MealCalorieTrackerApp:
@@ -213,7 +272,15 @@ class MealCalorieTrackerApp:
 
     def open_add_meal_window(self):
         # Implementation to add a new meal (similar to the original logic)
-        pass
+        open_add_meal_window(self)
+    
+    def refresh_meal_options(self):
+        refresh_meal_options(self)
+    
+    def refresh_combo_boxes(self):
+        for row in self.meal_rows:
+            meal_combobox = row['meal_combobox']
+            meal_combobox.config(values=self.meal_options)
 
 
 if __name__ == "__main__":
