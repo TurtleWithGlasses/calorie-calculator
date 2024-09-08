@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database import init_db, fetch_meal_data, get_meal_calories, add_new_meal
 
-
 # Validation function to check meal and quantity
 def validate_meal_and_quantity(meal, quantity):
     if not meal:
@@ -14,45 +13,45 @@ def validate_meal_and_quantity(meal, quantity):
     print("Meals and quantity are valid.")
     return True
 
-
 class MealSection:
     def __init__(self, app, root, title, meal_options, row_counter, selected_meal_calories):
-        self.app = app  # Reference to the main app
+        self.app = app
         self.root = root
         self.title = title
         self.meal_options = meal_options
         self.row_counter = row_counter
         self.total_calories = 0
         self.meal_rows = []
-        self.selected_meal_calories = selected_meal_calories  # Moved here as a class attribute
+        self.selected_meal_calories = selected_meal_calories
 
         # Create the section UI
         self.create_section()
 
     def create_section(self):
         # Main Frame for the section (Frame 1, Frame 2, Frame 3)
-        section_frame = tk.Frame(self.root, bd=2, relief=tk.GROOVE, padx=10, pady=10)
+        section_frame = tk.Frame(self.root, bd=2, relief=tk.GROOVE, padx=10, pady=5)
         section_frame.pack(fill=tk.X, padx=5, pady=5)
 
         # Title for the section
         frame_title_label = tk.Label(section_frame, text=self.title, font=("Arial", 12, "bold"))
-        frame_title_label.pack(anchor="w", pady=10)
+        frame_title_label.pack(anchor="w", pady=5)
 
-        # Frame for meal rows (scrollable)
-        meal_frame = tk.Frame(section_frame)
-        meal_frame.pack(fill=tk.X, pady=10)
-
-        canvas = tk.Canvas(meal_frame)
+        # Create canvas for scrolling
+        canvas = tk.Canvas(section_frame)
         canvas.pack(side=tk.LEFT, fill="both", expand=True)
 
-        scrollbar = tk.Scrollbar(meal_frame, orient="vertical", command=canvas.yview)
+        # Scrollbar for the canvas
+        scrollbar = tk.Scrollbar(section_frame, orient="vertical", command=canvas.yview)
         scrollbar.pack(side=tk.RIGHT, fill="y")
-
         canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
+        # Create a frame inside the canvas to hold the meal rows
         self.meal_input_frame = tk.Frame(canvas)
+        self.meal_input_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.meal_input_frame, anchor="nw")
+
+        # Bind the mouse wheel to the canvas scroll event
+        self.bind_mouse_wheel(canvas)
 
         tk.Label(self.meal_input_frame, text="Meal").grid(row=0, column=0, padx=5)
         tk.Label(self.meal_input_frame, text="Quantity").grid(row=0, column=1, padx=5)
@@ -62,19 +61,19 @@ class MealSection:
         for _ in range(3):
             self.add_meal_row()
 
-        # Frame for "Add More", "Reset", and total calories
-        button_frame = tk.Frame(section_frame)
-        button_frame.pack(fill=tk.X, pady=10)
+        # Frame for "Add More", "Reset", and total calories, placed **after** meal rows
+        button_frame = tk.Frame(self.root)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        add_more_btn = tk.Button(button_frame, text="Add More", command=self.add_meal_row)
+        add_more_btn.pack(side=tk.LEFT, padx=5)
+
+        reset_btn = tk.Button(button_frame, text="Reset", command=self.reset_section)
+        reset_btn.pack(side=tk.LEFT, padx=5)
 
         # Total calories label for the section
         self.total_calorie_label = tk.Label(button_frame, text="Total: 0", font=("Arial", 10))
-        self.total_calorie_label.pack(side=tk.RIGHT, padx=10)
-
-        add_more_btn = tk.Button(button_frame, text="Add More", command=self.add_meal_row)
-        add_more_btn.pack(side=tk.LEFT, padx=10)
-
-        reset_btn = tk.Button(button_frame, text="Reset", command=self.reset_section)
-        reset_btn.pack(side=tk.LEFT, padx=10)
+        self.total_calorie_label.pack(side=tk.LEFT, padx=5)
 
     def add_meal_row(self):
         row_widgets = {}
@@ -109,6 +108,15 @@ class MealSection:
         quantity_entry.bind("<KeyRelease>", lambda e: self.update_total_calories(row_widgets))
 
         self.row_counter[0] += 1
+
+    def bind_mouse_wheel(self, widget):
+        widget.bind("<Enter>", lambda _: widget.bind_all("<MouseWheel>", self.on_mouse_wheel))
+        widget.bind("<Leave>", lambda _: widget.unbind_all("<MouseWheel>"))
+    
+    def on_mouse_wheel(self, event):
+        widget = event.widget
+        if isinstance(widget, tk.Canvas):
+            widget.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def delete_meal_row(self, row_widgets):
         # Remove widgets from the grid
