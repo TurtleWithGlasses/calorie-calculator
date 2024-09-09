@@ -64,3 +64,18 @@ def add_new_meal(name, calories):
     conn.close()
     return True  # Successfully added
 
+# Edit a meal in the database
+def edit_meal_in_db(old_name, new_name, new_calories):
+    conn = sqlite3.connect('meals.db')  # Adjust according to your DB
+    cursor = conn.cursor()
+    cursor.execute("UPDATE meals SET name=?, calories=? WHERE name=?", (new_name, new_calories, old_name))
+    conn.commit()
+    conn.close()
+
+# Delete a meal from the database
+def delete_meal_from_db(meal_name):
+    conn = sqlite3.connect('meals.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM meals WHERE name=?", (meal_name,))
+    conn.commit()
+    conn.close()
