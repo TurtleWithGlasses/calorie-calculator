@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal
 
+
 # Function to open the Manage Meals window
 def open_manage_meals_window(self):
     manage_meal_window = tk.Toplevel(self.root)
@@ -43,33 +44,26 @@ def open_manage_meals_window(self):
     def edit_meal():
         selected_index = meal_listbox.curselection()
         if selected_index:
-            # Extract the meal name and calories
             selected_meal = meal_listbox.get(selected_index)
             meal_name, meal_calories = selected_meal.split(" - ")[0], selected_meal.split(" - ")[1].split(" ")[0]
-            
-            # Open a new window for editing
             edit_window = tk.Toplevel(manage_meal_window)
             edit_window.title("Edit Meal")
             edit_window.geometry("300x200")
             
-            # Meal Name Label and Entry
             tk.Label(edit_window, text="Meal Name:").pack(pady=5)
             new_meal_name_entry = tk.Entry(edit_window)
             new_meal_name_entry.pack(pady=5)
             new_meal_name_entry.insert(0, meal_name)
 
-            # Meal Calories Label and Entry
             tk.Label(edit_window, text="Calories:").pack(pady=5)
             new_meal_calories_entry = tk.Entry(edit_window)
             new_meal_calories_entry.pack(pady=5)
             new_meal_calories_entry.insert(0, meal_calories)
 
-            # OK button to save changes
             def save_edited_meal():
                 new_name = new_meal_name_entry.get().strip()
                 new_calories = new_meal_calories_entry.get().strip()
 
-                # Validate input and update meal in the database
                 if new_name and new_calories.isdigit():
                     edit_meal_in_db(meal_name, new_name, int(new_calories))
                     self.refresh_meal_options()
@@ -79,26 +73,20 @@ def open_manage_meals_window(self):
                 else:
                     messagebox.showerror("Input Error", "Please enter a valid meal name and calorie count.")
             
-            # Cancel button to discard changes
-            def cancel_edit():
-                edit_window.destroy()
-
-            # Buttons for OK and Cancel
             ok_button = tk.Button(edit_window, text="OK", command=save_edited_meal)
-            ok_button.pack(side=tk.LEFT, padx=10, pady=10)
+            ok_button.pack(side=tk.LEFT, padx=15, pady=10)
             
-            cancel_button = tk.Button(edit_window, text="Cancel", command=cancel_edit)
-            cancel_button.pack(side=tk.RIGHT, padx=10, pady=10)
+            cancel_button = tk.Button(edit_window, text="Cancel", command=edit_window.destroy)
+            cancel_button.pack(side=tk.RIGHT, padx=15, pady=10)
 
     def delete_meal():
         selected_index = meal_listbox.curselection()
         if selected_index:
             selected_meal = meal_listbox.get(selected_index).split(" - ")[0]
-            delete_meal_from_db(selected_meal)  # Delete meal from DB
+            delete_meal_from_db(selected_meal)
             self.refresh_meal_options()
             meal_listbox.delete(selected_index)
 
-    # Buttons for Adding, Editing, and Deleting
     save_button = tk.Button(manage_meal_window, text="Add Meal", command=save_new_meal)
     save_button.pack(side=tk.LEFT, padx=10, pady=10)
     
@@ -108,22 +96,16 @@ def open_manage_meals_window(self):
     delete_button = tk.Button(manage_meal_window, text="Delete Meal", command=delete_meal)
     delete_button.pack(side=tk.LEFT, padx=10, pady=10)
 
-# Function to refresh the meal options in combo boxes after adding a new meal
 def refresh_meal_options(self):
     meal_data = fetch_meal_data()
     self.meal_options = [meal[0] for meal in meal_data]
 
-    # Refresh the combo boxes for all sections
     for section in self.sections:
-        section.meal_options = self.meal_options  # Update meal options in the section
+        section.meal_options = self.meal_options
         section.refresh_combo_boxes()
 
-# Validation function to check quantity (since meal is now a combo box)
 def validate_quantity(quantity):
-    if not quantity.isdigit():
-        return False
-    return True
-
+    return quantity.isdigit()
 
 class MealSection:
     def __init__(self, app, root, title, meal_options, row_counter, selected_meal_calories):
@@ -131,6 +113,7 @@ class MealSection:
         self.root = root
         self.title = title
         self.meal_options = meal_options
+        self.filtered_options = meal_options  # Stores filtered options dynamically
         self.row_counter = row_counter
         self.total_calories = 0
         self.meal_rows = []
@@ -160,7 +143,7 @@ class MealSection:
         self.bind_mouse_wheel(canvas)
 
         tk.Label(self.meal_input_frame, text="Meal").grid(row=0, column=0, padx=5)
-        tk.Label(self.meal_input_frame, text="Quantity").grid(row=0, column=1, padx=5)
+        tk.Label(self.meal_input_frame, text="Quantity (100g)").grid(row=0, column=1, padx=5)
         tk.Label(self.meal_input_frame, text="Total Calories").grid(row=0, column=2, padx=5)
 
         for _ in range(3):
@@ -181,10 +164,18 @@ class MealSection:
     def add_meal_row(self):
         row_widgets = {}
 
-        meal_combobox = ttk.Combobox(self.meal_input_frame, values=self.meal_options)
+        # Meal selection (ComboBox)
+        meal_combobox = ttk.Combobox(self.meal_input_frame)
         meal_combobox.grid(row=self.row_counter[0], column=0, padx=5, pady=5)
         row_widgets['meal_combobox'] = meal_combobox
 
+        # Bind the combobox to handle user typing and auto-complete after 3 characters
+        meal_combobox.bind("<KeyRelease>", lambda e: self.search_meals_in_db(meal_combobox))
+
+        # Bind the Enter key to select the meal and close the combobox
+        meal_combobox.bind("<Return>", lambda e: self.select_meal_and_close(meal_combobox, row_widgets))
+
+        # Quantity input (Entry)
         quantity_entry = tk.Entry(self.meal_input_frame, width=5)
         quantity_entry.grid(row=self.row_counter[0], column=1, padx=5, pady=5)
         row_widgets['quantity_entry'] = quantity_entry
@@ -204,10 +195,52 @@ class MealSection:
 
         self.row_counter[0] += 1
 
+    def search_meals_in_db(self, combobox):
+        # Get the current text typed by the user
+        current_text = combobox.get().lower()
+
+        # Trigger search only if the user typed at least 3 characters
+        if len(current_text) >= 3:
+            # Fetch meals from the database that match the input
+            matched_meals = self.fetch_meals_from_db(current_text)
+
+            # Clear the Combobox options
+            combobox['values'] = ()
+            
+            # Add the matched meals back to the combobox
+            combobox['values'] = matched_meals
+
+            # Open the dropdown to show the new options
+            combobox.event_generate("<Down>")
+
+    def fetch_meals_from_db(self, search_text):
+        # Fetch all meals from the database (you could optimize this to fetch dynamically)
+        all_meals = fetch_meal_data()
+        
+        # Filter meals that contain the search text
+        matched_meals = [meal[0] for meal in all_meals if search_text in meal[0].lower()]
+        
+        return matched_meals
+
+    def select_meal_and_close(self, combobox, row_widgets):
+        # Get the currently filtered options
+        filtered_options = combobox["values"]
+
+        # If there are filtered options, select the first one
+        if filtered_options:
+            combobox.set(filtered_options[0])  # Set the combobox to the first filtered option
+            combobox.event_generate("<<ComboboxSelected>>")  # Trigger the selection event
+            combobox.event_generate("<Escape>")  # This simulates pressing the 'Esc' key to close the dropdown
+
+            # Move focus to the quantity entry field after selecting the meal
+            row_widgets['quantity_entry'].focus()
+        else:
+            messagebox.showinfo("No Match", "No meals found that match your input.")
+
     def bind_mouse_wheel(self, widget):
         widget.bind("<Enter>", lambda _: widget.bind_all("<MouseWheel>", self.on_mouse_wheel))
         widget.bind("<Leave>", lambda _: widget.unbind_all("<MouseWheel>"))
-    
+
     def on_mouse_wheel(self, event):
         widget = event.widget
         if isinstance(widget, tk.Canvas):
@@ -254,7 +287,7 @@ class MealSection:
 
         self.total_calories = 0
         self.total_calorie_label.config(text="Total: 0")
-    
+
     def refresh_combo_boxes(self):
         for row in self.meal_rows:
             meal_combobox = row['meal_combobox']
@@ -305,7 +338,7 @@ class MealCalorieTrackerApp:
 
     def open_manage_meals_window(self):
         open_manage_meals_window(self)
-    
+
     def refresh_meal_options(self):
         refresh_meal_options(self)
 
@@ -313,7 +346,7 @@ class MealCalorieTrackerApp:
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Meal Calorie Tracker")
-    root.geometry("440x1200")
+    root.geometry("500x1200")
 
     app = MealCalorieTrackerApp(root)
     root.mainloop()
