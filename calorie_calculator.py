@@ -9,10 +9,20 @@ def open_manage_meals_window(self):
     manage_meal_window.title("Manage Meals")
     manage_meal_window.geometry("400x600")
 
+    # Create a frame to hold the Listbox and the scrollbar
+    listbox_frame = tk.Frame(manage_meal_window)
+    listbox_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+
+    # Create a scrollbar for the Listbox
+    scrollbar = tk.Scrollbar(listbox_frame)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
     # List of existing meals for editing and deleting
-    meal_listbox = tk.Listbox(manage_meal_window)
-    meal_listbox.pack(pady=10, fill=tk.BOTH, expand=True)
-    
+    meal_listbox = tk.Listbox(listbox_frame, yscrollcommand=scrollbar.set)
+    meal_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    # Configure the scrollbar to control the Listbox
+    scrollbar.config(command=meal_listbox.yview) 
     # Populate listbox with existing meals
     meal_data = fetch_meal_data()  # Get current meals from DB
     for meal in meal_data:

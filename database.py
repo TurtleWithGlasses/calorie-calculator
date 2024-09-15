@@ -24,7 +24,7 @@ def insert_meal_data():
 def fetch_meal_data():
     conn = sqlite3.connect("meals.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT name, calories FROM meals")
+    cursor.execute("SELECT name, calories FROM meals ORDER BY name ASC")
     data = cursor.fetchall()
     conn.close()
     
