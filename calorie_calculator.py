@@ -277,12 +277,16 @@ class MealSection:
             calories_label = row['calories_label']
 
             meal = meal_combobox.get().strip()
-            quantity = quantity_entry.get().strip()
+            grams = quantity_entry.get().strip()
 
-            if validate_quantity(quantity):
-                meal_cal = self.selected_meal_calories.get(meal, 0) * int(quantity)
-                calories_label.config(text=f"Total Calories: {meal_cal}")
-                self.total_calories += meal_cal
+            if validate_quantity(grams):
+                meal_cal = self.selected_meal_calories.get(meal, 0)
+                grams = int(grams)
+
+                calculated_calories = (meal_cal * grams) / 100
+
+                calories_label.config(text=f"Total Calories: {int(calculated_calories)}")
+                self.total_calories += calculated_calories
 
         self.total_calorie_label.config(text=f"Total: {self.total_calories}")
         self.app.update_total_daily_calories()
