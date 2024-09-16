@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal
+from datetime import datetime
 
 
 # Function to open the Manage Meals window
@@ -328,8 +329,8 @@ class MealCalorieTrackerApp:
         select_date_btn = tk.Button(top_frame, text="Select Date")
         select_date_btn.pack(side=tk.LEFT, padx=10)
 
-        current_date_time_label = tk.Label(top_frame, text="Current date & time")
-        current_date_time_label.pack(side=tk.LEFT, padx=10)
+        self.current_date_time_label = tk.Label(top_frame, text="", font=("Arial", 12))
+        self.current_date_time_label.pack(side=tk.LEFT, padx=10)
 
         manage_meal_btn = tk.Button(top_frame, text="Manage Meals", command=self.open_manage_meals_window)
         manage_meal_btn.pack(side=tk.RIGHT, padx=10)
@@ -340,6 +341,15 @@ class MealCalorieTrackerApp:
 
         self.total_calories_label = tk.Label(self.root, text="Total Calories for Today: 0", font=("Arial", 12))
         self.total_calories_label.pack()
+
+        self.update_date_time()
+
+    def update_date_time(self):
+        current_time = datetime.now().strftime("%Y-%m-%d\n%H:%M:%S")
+
+        self.current_date_time_label.config(text=f"{current_time}")
+
+        self.root.after(1000, self.update_date_time)
 
     def create_section(self, title):
         row_counter = [1]
