@@ -1,6 +1,7 @@
+from tkcalendar import Calendar
 import tkinter as tk
 from tkinter import ttk, messagebox
-from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal
+from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal, save_daily_calories, fetch_meals_for_date
 from datetime import datetime
 
 
@@ -172,21 +173,25 @@ class MealSection:
         self.total_calorie_label = tk.Label(button_frame, text="Total: 0", font=("Arial", 10))
         self.total_calorie_label.pack(side=tk.LEFT, padx=5)
 
+    def bind_mouse_wheel(self, widget):
+        widget.bind("<Enter>", lambda _: widget.bind_all("<MouseWheel>", self.on_mouse_wheel))
+        widget.bind("<Leave>", lambda _: widget.unbind_all("<MouseWheel>"))
+
+    def on_mouse_wheel(self, event):
+        widget = event.widget
+        if isinstance(widget, tk.Canvas):
+            widget.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
     def add_meal_row(self):
         row_widgets = {}
 
-        # Meal selection (ComboBox)
         meal_combobox = ttk.Combobox(self.meal_input_frame)
         meal_combobox.grid(row=self.row_counter[0], column=0, padx=5, pady=5)
         row_widgets['meal_combobox'] = meal_combobox
 
-        # Bind the combobox to handle user typing and auto-complete after 3 characters
         meal_combobox.bind("<KeyRelease>", lambda e: self.search_meals_in_db(meal_combobox))
-
-        # Bind the Enter key to select the meal and close the combobox
         meal_combobox.bind("<Return>", lambda e: self.select_meal_and_close(meal_combobox, row_widgets))
 
-        # Quantity input (Entry)
         quantity_entry = tk.Entry(self.meal_input_frame, width=5)
         quantity_entry.grid(row=self.row_counter[0], column=1, padx=5, pady=5)
         row_widgets['quantity_entry'] = quantity_entry
@@ -206,69 +211,33 @@ class MealSection:
 
         self.row_counter[0] += 1
 
-    def search_meals_in_db(self, combobox):
-        # Get the current text typed by the user
-        current_text = combobox.get().lower()
+    def add_meal_row_with_data(self, meal_name, grams, calories):
+        row_widgets = {}
 
-        # Trigger search only if the user typed at least 3 characters
-        if len(current_text) >= 3:
-            # Fetch meals from the database that match the input
-            matched_meals = self.fetch_meals_from_db(current_text)
+        meal_combobox = ttk.Combobox(self.meal_input_frame)
+        meal_combobox.grid(row=self.row_counter[0], column=0, padx=5, pady=5)
+        meal_combobox.set(meal_name)  # Set the predefined meal name
+        row_widgets['meal_combobox'] = meal_combobox
 
-            # Clear the Combobox options
-            combobox['values'] = ()
-            
-            # Add the matched meals back to the combobox
-            combobox['values'] = matched_meals
+        quantity_entry = tk.Entry(self.meal_input_frame, width=5)
+        quantity_entry.grid(row=self.row_counter[0], column=1, padx=5, pady=5)
+        quantity_entry.insert(0, grams)  # Set the predefined grams
+        row_widgets['quantity_entry'] = quantity_entry
 
-            # Open the dropdown to show the new options
-            combobox.event_generate("<Down>")
+        calories_label = tk.Label(self.meal_input_frame, text=f"Total Calories: {int(calories)}")
+        calories_label.grid(row=self.row_counter[0], column=2, padx=5, pady=5)
+        row_widgets['calories_label'] = calories_label
 
-    def fetch_meals_from_db(self, search_text):
-        # Fetch all meals from the database (you could optimize this to fetch dynamically)
-        all_meals = fetch_meal_data()
-        
-        # Filter meals that contain the search text
-        matched_meals = [meal[0] for meal in all_meals if search_text in meal[0].lower()]
-        
-        return matched_meals
+        delete_btn = tk.Button(self.meal_input_frame, text="Delete", command=lambda: self.delete_meal_row(row_widgets))
+        delete_btn.grid(row=self.row_counter[0], column=3, padx=5, pady=5)
+        row_widgets['delete_btn'] = delete_btn
 
-    def select_meal_and_close(self, combobox, row_widgets):
-        # Get the currently filtered options
-        filtered_options = combobox["values"]
+        self.meal_rows.append(row_widgets)
 
-        # If there are filtered options, select the first one
-        if filtered_options:
-            combobox.set(filtered_options[0])  # Set the combobox to the first filtered option
-            combobox.event_generate("<<ComboboxSelected>>")  # Trigger the selection event
-            combobox.event_generate("<Escape>")  # This simulates pressing the 'Esc' key to close the dropdown
+        self.total_calories += calories
+        self.total_calorie_label.config(text=f"Total: {self.total_calories}")
 
-            # Move focus to the quantity entry field after selecting the meal
-            row_widgets['quantity_entry'].focus()
-        else:
-            messagebox.showinfo("No Match", "No meals found that match your input.")
-
-    def bind_mouse_wheel(self, widget):
-        widget.bind("<Enter>", lambda _: widget.bind_all("<MouseWheel>", self.on_mouse_wheel))
-        widget.bind("<Leave>", lambda _: widget.unbind_all("<MouseWheel>"))
-
-    def on_mouse_wheel(self, event):
-        widget = event.widget
-        if isinstance(widget, tk.Canvas):
-            widget.yview_scroll(int(-1*(event.delta/120)), "units")
-
-    def delete_meal_row(self, row_widgets):
-        for widget in row_widgets.values():
-            widget.grid_forget()
-        self.meal_rows.remove(row_widgets)
-        self.update_total_calories()
-
-    def on_meal_selected(self, row_widgets):
-        meal_combobox = row_widgets['meal_combobox']
-        meal = meal_combobox.get().strip()
-        if meal:
-            meal_calories = get_meal_calories(meal)
-            self.selected_meal_calories[meal] = meal_calories
+        self.row_counter[0] += 1
 
     def update_total_calories(self, row_widgets=None):
         self.total_calories = 0
@@ -303,10 +272,14 @@ class MealSection:
         self.total_calories = 0
         self.total_calorie_label.config(text="Total: 0")
 
-    def refresh_combo_boxes(self):
-        for row in self.meal_rows:
-            meal_combobox = row['meal_combobox']
-            meal_combobox.config(values=self.meal_options)
+    def on_meal_selected(self, row_widgets):
+        meal_combobox = row_widgets['meal_combobox']
+        meal = meal_combobox.get().strip()
+        if meal:
+            meal_calories = get_meal_calories(meal)
+            self.selected_meal_calories[meal] = meal_calories
+            # Optionally update the calories label
+            self.update_total_calories(row_widgets)
 
 
 class MealCalorieTrackerApp:
@@ -315,6 +288,7 @@ class MealCalorieTrackerApp:
         self.total_daily_calories = 0
         self.sections = []
         self.selected_meal_calories = {}
+        self.selected_date = datetime.now().strftime("%Y-%m-%d")
 
         init_db()
         meal_data = fetch_meal_data()
@@ -326,8 +300,8 @@ class MealCalorieTrackerApp:
         top_frame = tk.Frame(self.root)
         top_frame.pack(pady=10)
 
-        select_date_btn = tk.Button(top_frame, text="Select Date")
-        select_date_btn.pack(side=tk.LEFT, padx=10)
+        self.select_date_btn = tk.Button(top_frame, text=f"Select Date: {self.selected_date}", command=self.open_calendar)
+        self.select_date_btn.pack(side=tk.LEFT, padx=10)
 
         self.current_date_time_label = tk.Label(top_frame, text="", font=("Arial", 12))
         self.current_date_time_label.pack(side=tk.LEFT, padx=10)
@@ -344,27 +318,84 @@ class MealCalorieTrackerApp:
 
         self.update_date_time()
 
-    def update_date_time(self):
-        current_time = datetime.now().strftime("%Y-%m-%d\n%H:%M:%S")
+    def open_calendar(self):
+        self.cal_win = tk.Toplevel(self.root)
+        self.cal_win.title("Select Date")
 
-        self.current_date_time_label.config(text=f"{current_time}")
+        cal = Calendar(self.cal_win, selectmode="day", year=2024, month=9, day=15)
+        cal.pack(pady=20)
 
-        self.root.after(1000, self.update_date_time)
+        def on_date_selected():
+            self.selected_date = cal.get_date()
 
-    def create_section(self, title):
-        row_counter = [1]
-        section = MealSection(self, self.root, title, self.meal_options, row_counter, self.selected_meal_calories)
-        self.sections.append(section)
+            self.selected_date = datetime.strptime(self.selected_date, "%m/%d/%y").strftime("%Y-%m-%d")
+            self.select_date_btn.config(text=f"Selected Date: {self.selected_date}")
+            self.cal_win.destroy()
+
+            self.load_calories_for_date()
+
+        select_btn = tk.Button(self.cal_win, text="Select", command=on_date_selected)
+        select_btn.pack(pady=10)
+
+    def load_calories_for_date(self):
+        if self.selected_date:
+            # Fetch meals for the selected date using fetch_meals_for_date
+            meals = fetch_meals_for_date(self.selected_date)
+            
+            if meals:
+                for section in self.sections:
+                    section.reset_section()
+                
+                for meal_name, grams, calories in meals:
+                    self.sections[0].add_meal_row_with_data(meal_name, grams, calories)
+                
+                self.update_total_daily_calories()
+            else:
+                print(f"No meals found for {self.selected_date}")
+
 
     def update_total_daily_calories(self):
-        total_daily_calories = sum(section.total_calories for section in self.sections)
-        self.total_calories_label.config(text=f"Total Calories for Today: {total_daily_calories}")
+        total_daily_calories = 0
+        meals_for_date = []
+
+        for section in self.sections:
+            for row in section.meal_rows:
+                meal_combobox = row['meal_combobox']
+                quantity_entry = row['quantity_entry']
+                calories_label = row['calories_label']
+
+                meal = meal_combobox.get().strip()
+                grams = quantity_entry.get().strip()
+
+                if validate_quantity(grams):
+                    grams = int(grams)
+                    calories = float(calories_label.cget("text").replace("Total Calories: ", ""))
+
+                    meals_for_date.append((self.selected_date, meal, grams, calories))
+                    total_daily_calories += calories
+
+        self.total_calories_label.config(text=f"Total Calories for {self.selected_date}: {total_daily_calories}")
+        save_daily_calories(self.selected_date, total_daily_calories, meals_for_date)
+
+    def update_date_time(self):
+        current_time = datetime.now().strftime("%Y-%m-%d\n%H:%M:%S")
+        self.current_date_time_label.config(text=f"{current_time}")
+        self.root.after(1000, self.update_date_time)
 
     def open_manage_meals_window(self):
         open_manage_meals_window(self)
 
     def refresh_meal_options(self):
-        refresh_meal_options(self)
+        meal_data = fetch_meal_data()
+        self.meal_options = [meal[0] for meal in meal_data]
+        for section in self.sections:
+            section.meal_options = self.meal_options
+            section.refresh_combo_boxes()
+
+    def create_section(self, title):
+        row_counter = [1]
+        section = MealSection(self, self.root, title, self.meal_options, row_counter, self.selected_meal_calories)
+        self.sections.append(section)
 
 
 if __name__ == "__main__":
