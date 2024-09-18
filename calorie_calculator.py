@@ -130,6 +130,7 @@ class MealSection:
         self.total_calories = 0
         self.meal_rows = []
         self.selected_meal_calories = selected_meal_calories
+        self.empty_row_count = 4
 
         # Create the section UI
         self.create_section()
@@ -158,7 +159,7 @@ class MealSection:
         tk.Label(self.meal_input_frame, text="Quantity (100g)").grid(row=0, column=1, padx=5)
         tk.Label(self.meal_input_frame, text="Total Calories").grid(row=0, column=2, padx=5)
 
-        for _ in range(3):
+        for _ in range(self.empty_row_count):
             self.add_meal_row()
 
         button_frame = tk.Frame(self.root)
@@ -215,6 +216,7 @@ class MealSection:
         row_widgets['delete_btn'] = delete_btn
 
         self.meal_rows.append(row_widgets)
+        self.row_counter[0] += 1
 
         meal_combobox.bind("<<ComboboxSelected>>", lambda e: self.on_meal_selected(row_widgets))
         quantity_entry.bind("<KeyRelease>", lambda e: self.update_total_calories(row_widgets))
@@ -272,15 +274,15 @@ class MealSection:
         self.app.update_total_daily_calories()
 
     def reset_section(self):
+        # Remove all widgets associated with each row
         for row in self.meal_rows:
             for widget in row.values():
-                if isinstance(widget, tk.Entry) or isinstance(widget, ttk.Combobox):
-                    widget.delete(0, tk.END)
-                elif isinstance(widget, tk.Label) and "Total Calories" in widget.cget("text"):
-                    widget.config(text="Total Calories: 0")
+                widget.grid_forget()  # Remove widget from the grid layout
 
+        # Clear the meal rows list and reset total calories
+        self.meal_rows.clear()
         self.total_calories = 0
-        self.total_calorie_label.config(text="Total: 0")
+        self.total_calorie_label.config(text="")
 
     def on_meal_selected(self, row_widgets):
         meal_combobox = row_widgets['meal_combobox']
@@ -291,6 +293,45 @@ class MealSection:
             # Optionally update the calories label
             self.update_total_calories(row_widgets)
 
+    def count_empty_rows(self):
+        empty_rows = 0
+        for row in self.meal_rows:
+            meal_combobox = row['meal_combobox']
+            quantity_entry = row['quantity_entry']
+            
+            meal = meal_combobox.get().strip()
+            quantity = quantity_entry.get().strip()
+
+            if not meal and not quantity:  # If both are empty, consider the row empty
+                empty_rows += 1
+        return empty_rows
+
+    def load_calories_for_date(self):
+        if self.selected_date:
+            # Track the number of empty rows before resetting
+            num_empty_rows = self.sections[0].count_empty_rows()
+
+            # Fetch meals for the selected date from the database
+            meals_for_date = fetch_meals_for_date(self.selected_date)
+            
+            # Reset all sections (clear existing rows)
+            for section in self.sections:
+                section.reset_section()
+
+            # Add meals from the database for the selected date
+            for meal_name, grams, calories in meals_for_date:
+                self.sections[0].add_meal_row_with_data(meal_name, grams, calories)
+
+            # Add back the number of empty rows previously tracked
+            for _ in range(num_empty_rows):
+                self.sections[0].add_meal_row()
+
+            # Update the total daily calories based on the loaded meals
+            self.update_total_daily_calories()
+
+    def set_empty_rows_count(self, count):
+        # Set the number of empty rows to be used when reloading the date
+        self.empty_rows_count = count
 
 class MealCalorieTrackerApp:
     def __init__(self, root):
@@ -349,20 +390,27 @@ class MealCalorieTrackerApp:
 
     def load_calories_for_date(self):
         if self.selected_date:
-            # Fetch meals for the selected date using fetch_meals_for_date
-            meals = fetch_meals_for_date(self.selected_date)
+            # Fetch meals for the selected date from the database
+            meals_for_date = fetch_meals_for_date(self.selected_date)
             
-            if meals:
-                for section in self.sections:
-                    section.reset_section()
-                
-                for meal_name, grams, calories in meals:
-                    self.sections[0].add_meal_row_with_data(meal_name, grams, calories)
-                
-                self.update_total_daily_calories()
-            else:
-                print(f"No meals found for {self.selected_date}")
+            # Track the number of empty rows before resetting
+            num_empty_rows = self.sections[0].count_empty_rows()
 
+            # Reset all sections (clear existing rows)
+            for section in self.sections:
+                section.reset_section()
+
+            # Add meals from the database for the selected date
+            for meal_name, grams, calories in meals_for_date:
+                self.sections[0].add_meal_row_with_data(meal_name, grams, calories)
+
+            # Re-add the previously tracked number of empty rows
+            self.sections[0].set_empty_rows_count(num_empty_rows)
+            for _ in range(num_empty_rows):
+                self.sections[0].add_meal_row()
+
+            # Update the total daily calories based on the loaded meals
+            self.update_total_daily_calories()
 
     def update_total_daily_calories(self):
         total_daily_calories = 0
