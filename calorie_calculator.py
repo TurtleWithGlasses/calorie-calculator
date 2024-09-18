@@ -1,7 +1,7 @@
 from tkcalendar import Calendar
 import tkinter as tk
 from tkinter import ttk, messagebox
-from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal, save_daily_calories, fetch_meals_for_date
+from database import init_db, fetch_meal_data, get_meal_calories, edit_meal_in_db, delete_meal_from_db, add_new_meal, save_daily_calories, fetch_meals_for_date, fetch_meals_from_db
 from datetime import datetime
 
 
@@ -182,6 +182,16 @@ class MealSection:
         if isinstance(widget, tk.Canvas):
             widget.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
+    def search_meals_in_db(self, combobox):
+        current_text = combobox.get().lower()
+        if len(current_text) >= 3:
+         try:
+             matched_meals = fetch_meals_from_db(current_text)
+             combobox['values'] = matched_meals
+             combobox.event_generate("<Down>")
+         except Exception as e:
+             print(f"Error fetching meals: {e}")
+    
     def add_meal_row(self):
         row_widgets = {}
 
