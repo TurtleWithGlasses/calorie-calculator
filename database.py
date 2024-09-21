@@ -30,7 +30,9 @@ def init_db():
                         date TEXT NOT NULL,
                         meal_name TEXT NOT NULL,
                         grams INTEGER NOT NULL,
-                        calories REAL NOT NULL)''')
+                        calories REAL NOT NULL,
+                        section_index INTEGER NOT NULL
+                   )''')
     
     conn.commit()
     cursor.close()
@@ -76,7 +78,6 @@ def fetch_meal_data():
     finally:
         conn.close()
     return data
-
 
 def get_meal_calories(meal_name):
     try:
@@ -145,17 +146,16 @@ def save_daily_calories(selected_date, total_calories, meals):
     cursor = conn.cursor()
     try:
         cursor.execute('''INSERT INTO daily_calories (date, total_calories)
-                  VALUES (%s, %s)
-                  ON CONFLICT (date) DO UPDATE
-                  SET total_calories = EXCLUDED.total_calories''', 
-               (selected_date, total_calories))
+                          VALUES (%s, %s)
+                          ON CONFLICT (date) DO UPDATE
+                          SET total_calories = EXCLUDED.total_calories''',
+                       (selected_date, total_calories))
         save_meals_for_date(conn, selected_date, meals)
         conn.commit()
     except psycopg2.Error as e:
         print(f"Database error: {e}")
     finally:
         conn.close()
-
 
 def save_meals_for_date(conn, selected_date, meals):
     cursor = conn.cursor()
@@ -164,19 +164,28 @@ def save_meals_for_date(conn, selected_date, meals):
     cursor.execute('DELETE FROM daily_meals WHERE date = %s', (selected_date,))
     
     # Insert the new meals for the selected date
-    cursor.executemany('INSERT INTO daily_meals (date, meal_name, grams, calories) VALUES (%s, %s, %s, %s)', meals)
+    cursor.executemany('INSERT INTO daily_meals (date, meal_name, grams, calories, section_index) VALUES (%s, %s, %s, %s, %s)', meals)
 
 def fetch_meals_for_date(selected_date):
-    conn = psycopg2.connect(host="localhost",
-                            database="calorie_tracker_db",
-                            user=postgresg_user,
-                            password=postgresg_pw)
+    conn = psycopg2.connect(
+        host="localhost",
+        database="calorie_tracker_db",
+        user=postgresg_user,
+        password=postgresg_pw
+    )
     cursor = conn.cursor()
 
-    cursor.execute('SELECT meal_name, grams, calories FROM daily_meals WHERE date = %s', (selected_date,))
+    # Query to fetch meals for a date and include the section index (0, 1, 2)
+    cursor.execute('''
+        SELECT meal_name, grams, calories, section_index
+        FROM daily_meals
+        WHERE date = %s
+    ''', (selected_date,))
+    
     meals = cursor.fetchall()
-
     conn.close()
+    
+    print(f"Fetched meals for {selected_date}: {meals}")
     return meals
 
 def save_meals_with_retry(selected_date, meals, retries=5):
@@ -202,7 +211,7 @@ def save_meals_with_retry(selected_date, meals, retries=5):
                 raise  # If it's another kind of error, raise it
 
 def fetch_meals_from_db(search_text):
-        query = "SELECT name FROM meals WHERE LOWER(name) LIKE %s"
+        query = "SELECT name FROM meals WHERE LOWER(name) LIKE %s ORDER BY name ASC"
         search_param = f"%{search_text}%"
         conn = psycopg2.connect(
             host="localhost",
