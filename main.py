@@ -1,35 +1,22 @@
 #!/usr/bin/env python3
 """
-Calorie Tracker Pro - Modern PyQt6 Version
-A comprehensive calorie tracking application with modern UI and advanced features.
+Calorie Tracker Pro - PyQt6 Version
+A modern calorie tracking application built with PyQt6.
 """
 
 import sys
-import os
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QGridLayout, QLabel, QPushButton, QLineEdit, QComboBox, 
-    QSpinBox, QTableWidget, QTableWidgetItem, QTabWidget,
-    QSplitter, QFrame, QScrollArea, QMessageBox, QDialog,
-    QDialogButtonBox, QFormLayout, QGroupBox, QProgressBar,
-    QStatusBar, QMenuBar, QMenu, QFileDialog, QCalendarWidget,
-    QDateEdit, QTextEdit, QCheckBox, QSlider, QProgressDialog
+    QLabel, QPushButton, QSpinBox, QTabWidget,
+    QFrame, QMessageBox, QFormLayout, QGroupBox, 
+    QProgressBar, QStatusBar, QFileDialog,
+    QDateEdit
 )
-from PyQt6.QtCore import (
-    Qt, QTimer, QThread, pyqtSignal, QDate, QSize, QPropertyAnimation,
-    QEasingCurve, QRect, QPoint, QSettings
-)
-from PyQt6.QtGui import (
-    QFont, QPalette, QColor, QIcon, QPixmap, QPainter, 
-    QLinearGradient, QBrush, QAction, QKeySequence
-)
-from PyQt6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis, QBarSeries, QBarSet
+from PyQt6.QtCore import QDate
+from PyQt6.QtGui import QFont, QAction, QKeySequence
 
-from database_improved import DatabaseManager
-from config import APP_CONFIG, THEME_CONFIG, DB_CONFIG
+from database import DatabaseManager
 from meal_manager import MealManagerDialog
 from analytics_widget import AnalyticsWidget
 from meal_section_widget import MealSectionWidget
@@ -48,12 +35,12 @@ class ModernCalorieTracker(QMainWindow):
         self.init_ui()
         self.setup_connections()
         self.load_data()
-        
+            
     def init_ui(self):
         """Initialize the user interface."""
-        self.setWindowTitle(f"{APP_CONFIG['title']} v{APP_CONFIG['version']}")
-        self.setGeometry(100, 100, APP_CONFIG['window_width'], APP_CONFIG['window_height'])
-        self.setMinimumSize(APP_CONFIG['min_width'], APP_CONFIG['min_height'])
+        self.setWindowTitle("Calorie Tracker Pro")
+        self.setGeometry(100, 100, 1000, 700)
+        self.setMinimumSize(800, 600)
         
         # Apply modern styling
         self.apply_modern_theme()
@@ -62,8 +49,8 @@ class ModernCalorieTracker(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(10)
-        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
         
         # Create menu bar
         self.create_menu_bar()
@@ -78,73 +65,72 @@ class ModernCalorieTracker(QMainWindow):
         self.create_status_bar()
         
     def apply_modern_theme(self):
-        """Apply modern dark/light theme styling."""
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {THEME_CONFIG['background_color']};
-                color: {THEME_CONFIG['text_color']};
-            }}
+        """Apply modern theme styling."""
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #F5F5F5;
+                color: #2C3E50;
+            }
             
-            QPushButton {{
-                background-color: {THEME_CONFIG['primary_color']};
+            QPushButton {
+                background-color: #2E86AB;
                 color: white;
                 border: none;
                 padding: 8px 16px;
                 border-radius: 6px;
                 font-weight: bold;
                 font-size: 12px;
-            }}
+            }
             
-            QPushButton:hover {{
-                background-color: {THEME_CONFIG['secondary_color']};
-                transform: translateY(-1px);
-            }}
+            QPushButton:hover {
+                background-color: #A23B72;
+            }
             
-            QPushButton:pressed {{
-                background-color: {THEME_CONFIG['accent_color']};
-            }}
+            QPushButton:pressed {
+                background-color: #F18F01;
+            }
             
-            QLineEdit, QComboBox, QSpinBox {{
+            QLineEdit, QComboBox, QSpinBox {
                 padding: 8px;
                 border: 2px solid #E0E0E0;
                 border-radius: 4px;
                 background-color: white;
                 font-size: 12px;
-            }}
+            }
             
-            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{
-                border-color: {THEME_CONFIG['primary_color']};
-            }}
+            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+                border-color: #2E86AB;
+            }
             
-            QGroupBox {{
+            QGroupBox {
                 font-weight: bold;
                 border: 2px solid #E0E0E0;
                 border-radius: 8px;
                 margin-top: 10px;
                 padding-top: 10px;
-            }}
+            }
             
-            QGroupBox::title {{
+            QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px 0 5px;
-            }}
+            }
             
-            QTabWidget::pane {{
+            QTabWidget::pane {
                 border: 1px solid #C0C0C0;
                 background-color: white;
-            }}
+            }
             
-            QTabBar::tab {{
+            QTabBar::tab {
                 background-color: #F0F0F0;
                 padding: 8px 16px;
                 margin-right: 2px;
-            }}
+            }
             
-            QTabBar::tab:selected {{
-                background-color: {THEME_CONFIG['primary_color']};
+            QTabBar::tab:selected {
+                background-color: #2E86AB;
                 color: white;
-            }}
+            }
         """)
         
     def create_menu_bar(self):
@@ -159,10 +145,6 @@ class ModernCalorieTracker(QMainWindow):
         export_action.triggered.connect(self.export_data)
         file_menu.addAction(export_action)
         
-        import_action = QAction('&Import Data...', self)
-        import_action.triggered.connect(self.import_data)
-        file_menu.addAction(import_action)
-        
         file_menu.addSeparator()
         
         exit_action = QAction('E&xit', self)
@@ -176,10 +158,6 @@ class ModernCalorieTracker(QMainWindow):
         manage_meals_action = QAction('&Manage Meals...', self)
         manage_meals_action.triggered.connect(self.open_meal_manager)
         tools_menu.addAction(manage_meals_action)
-        
-        settings_action = QAction('&Settings...', self)
-        settings_action.triggered.connect(self.open_settings)
-        tools_menu.addAction(settings_action)
         
         # Help menu
         help_menu = menubar.addMenu('&Help')
@@ -240,7 +218,7 @@ class ModernCalorieTracker(QMainWindow):
         self.tab_widget.addTab(self.daily_tab, "Daily Tracking")
         
         # Analytics tab
-        self.analytics_tab = AnalyticsWidget(self.db_manager)
+        self.analytics_tab = self.create_analytics_tab()
         self.tab_widget.addTab(self.analytics_tab, "Analytics")
         
         # Goals tab
@@ -255,10 +233,10 @@ class ModernCalorieTracker(QMainWindow):
         layout = QVBoxLayout(tab)
         
         # Create meal sections
-        self.breakfast_section = MealSectionWidget("Breakfast", 0, self.db_manager)
-        self.lunch_section = MealSectionWidget("Lunch", 1, self.db_manager)
-        self.dinner_section = MealSectionWidget("Dinner", 2, self.db_manager)
-        self.snacks_section = MealSectionWidget("Snacks", 3, self.db_manager)
+        self.breakfast_section = MealSectionWidget("Breakfast (6:00-11:00)", 0, self.db_manager, self)
+        self.lunch_section = MealSectionWidget("Lunch (11:00-16:00)", 1, self.db_manager, self)
+        self.dinner_section = MealSectionWidget("Dinner (16:00-21:00)", 2, self.db_manager, self)
+        self.snacks_section = MealSectionWidget("Snacks (21:00-6:00)", 3, self.db_manager, self)
         
         self.meal_sections = [
             self.breakfast_section,
@@ -277,7 +255,7 @@ class ModernCalorieTracker(QMainWindow):
         
         self.total_calories_label = QLabel("Total Calories: 0")
         self.total_calories_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
-        self.total_calories_label.setStyleSheet(f"color: {THEME_CONFIG['primary_color']};")
+        self.total_calories_label.setStyleSheet("color: #2E86AB;")
         
         self.calorie_progress = QProgressBar()
         self.calorie_progress.setMaximum(3000)  # Assuming 3000 cal daily goal
@@ -291,8 +269,13 @@ class ModernCalorieTracker(QMainWindow):
         
         return tab
         
+    def create_analytics_tab(self):
+        """Create the analytics tab."""
+        self.analytics_widget = AnalyticsWidget(self.db_manager, self)
+        return self.analytics_widget
+        
     def create_goals_tab(self):
-        """Create the goals and settings tab."""
+        """Create the goals tab."""
         tab = QWidget()
         layout = QVBoxLayout(tab)
         
@@ -306,28 +289,11 @@ class ModernCalorieTracker(QMainWindow):
         
         goal_layout.addRow("Target Calories:", self.daily_goal_spin)
         
-        # Macro goals
-        macro_group = QGroupBox("Macro Goals")
-        macro_layout = QFormLayout(macro_group)
-        
-        self.protein_goal = QSpinBox()
-        self.protein_goal.setRange(0, 500)
-        self.protein_goal.setValue(150)
-        
-        self.carbs_goal = QSpinBox()
-        self.carbs_goal.setRange(0, 500)
-        self.carbs_goal.setValue(250)
-        
-        self.fat_goal = QSpinBox()
-        self.fat_goal.setRange(0, 200)
-        self.fat_goal.setValue(65)
-        
-        macro_layout.addRow("Protein (g):", self.protein_goal)
-        macro_layout.addRow("Carbs (g):", self.carbs_goal)
-        macro_layout.addRow("Fat (g):", self.fat_goal)
+        update_goal_btn = QPushButton("Update Goal")
+        update_goal_btn.clicked.connect(self.update_goal)
+        goal_layout.addRow(update_goal_btn)
         
         layout.addWidget(goal_group)
-        layout.addWidget(macro_group)
         layout.addStretch()
         
         return tab
@@ -363,6 +329,11 @@ class ModernCalorieTracker(QMainWindow):
             
         self.update_total_calories()
         
+    def refresh_meal_options(self):
+        """Refresh meal options in all sections."""
+        for section in self.meal_sections:
+            section.refresh_meal_options()
+        
     def set_date(self, date: QDate):
         """Set the current date and load data."""
         self.current_date = date
@@ -392,46 +363,35 @@ class ModernCalorieTracker(QMainWindow):
     def open_meal_manager(self):
         """Open the meal management dialog."""
         dialog = MealManagerDialog(self.db_manager, self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Refresh meal options in all sections
-            for section in self.meal_sections:
-                section.refresh_meal_options()
-                
+        dialog.meal_updated.connect(self.refresh_meal_options)
+        dialog.exec()
+        
     def export_data(self):
         """Export data to file."""
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export Data", "", "CSV Files (*.csv);;JSON Files (*.json)"
+            self, "Export Data", "", "JSON Files (*.json);;CSV Files (*.csv)"
         )
         
         if file_path:
             try:
-                self.db_manager.export_data(file_path)
-                QMessageBox.information(self, "Success", "Data exported successfully!")
+                if self.db_manager.export_data(file_path):
+                    QMessageBox.information(self, "Success", "Data exported successfully!")
+                else:
+                    QMessageBox.critical(self, "Error", "Failed to export data!")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to export data: {str(e)}")
-                
-    def import_data(self):
-        """Import data from file."""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Data", "", "CSV Files (*.csv);;JSON Files (*.json)"
-        )
         
-        if file_path:
-            try:
-                self.db_manager.import_data(file_path)
-                QMessageBox.information(self, "Success", "Data imported successfully!")
-                self.refresh_data()
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to import data: {str(e)}")
-                
-    def open_settings(self):
-        """Open settings dialog."""
-        QMessageBox.information(self, "Settings", "Settings dialog coming soon!")
+    def update_goal(self):
+        """Update daily calorie goal."""
+        goal = self.daily_goal_spin.value()
+        self.calorie_progress.setMaximum(goal)
+        self.update_total_calories()
+        QMessageBox.information(self, "Success", f"Goal updated to {goal} calories")
         
     def show_about(self):
         """Show about dialog."""
         QMessageBox.about(self, "About", 
-            f"{APP_CONFIG['title']} v{APP_CONFIG['version']}\n\n"
+            "Calorie Tracker Pro v2.0\n\n"
             "A modern calorie tracking application built with PyQt6.\n"
             "Features include meal management, analytics, and data export."
         )
@@ -440,8 +400,8 @@ class ModernCalorieTracker(QMainWindow):
 def main():
     """Main application entry point."""
     app = QApplication(sys.argv)
-    app.setApplicationName(APP_CONFIG['title'])
-    app.setApplicationVersion(APP_CONFIG['version'])
+    app.setApplicationName("Calorie Tracker Pro")
+    app.setApplicationVersion("2.0.0")
     
     # Set application style
     app.setStyle('Fusion')

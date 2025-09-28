@@ -6,15 +6,13 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, 
     QPushButton, QLineEdit, QSpinBox, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox, QTabWidget, QWidget, QGroupBox,
-    QFormLayout, QComboBox, QCheckBox, QTextEdit, QSplitter,
-    QFrame, QScrollArea, QProgressBar
+    QFormLayout, QComboBox, QFrame, QFileDialog
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont, QPixmap, QPainter, QColor
-from typing import List, Dict, Optional
+from PyQt6.QtCore import pyqtSignal
+from typing import Dict
 import logging
 
-from database_improved import DatabaseManager
+from database import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -442,8 +440,6 @@ class MealManagerDialog(QDialog):
         
     def export_meals(self):
         """Export meals to file."""
-        from PyQt6.QtWidgets import QFileDialog
-        
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Export Meals", "", "CSV Files (*.csv);;JSON Files (*.json)"
         )
@@ -456,8 +452,6 @@ class MealManagerDialog(QDialog):
                 
     def import_meals(self):
         """Import meals from file."""
-        from PyQt6.QtWidgets import QFileDialog
-        
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Import Meals", "", "JSON Files (*.json)"
         )

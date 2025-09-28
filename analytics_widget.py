@@ -4,20 +4,18 @@ Analytics widget with charts and data visualization for calorie tracking.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QDateEdit, QComboBox, QFrame, QGridLayout, QGroupBox,
-    QScrollArea, QTabWidget
+    QDateEdit, QFrame, QGridLayout, QTabWidget
 )
-from PyQt6.QtCore import Qt, QDate, pyqtSignal
-from PyQt6.QtGui import QFont, QColor, QPalette
+from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtGui import QPainter
 from PyQt6.QtCharts import (
-    QChart, QChartView, QLineSeries, QBarSeries, QBarSet,
-    QValueAxis, QDateTimeAxis, QPieSeries, QPieSlice
+    QChart, QChartView, QBarSeries, QBarSet, QValueAxis,
+    QPieSeries, QLineSeries
 )
-from typing import List, Dict, Optional
+from typing import List, Dict
 import logging
-from datetime import datetime, timedelta
 
-from database_improved import DatabaseManager
+from database import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +235,6 @@ class AnalyticsWidget(QWidget):
         # Customize slices
         for slice in series.slices():
             slice.setLabelVisible(True)
-            slice.setLabelFormat("{label}: {percentage:.1f}%")
             
         chart.addSeries(series)
         

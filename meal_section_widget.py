@@ -3,16 +3,16 @@ Modern meal section widget for tracking meals in different time periods.
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QComboBox, QSpinBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QFrame, QScrollArea, QGroupBox, QMessageBox
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
+    QComboBox, QSpinBox, QTableWidget,
+    QHeaderView, QGroupBox, QMessageBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont, QColor
-from typing import List, Dict, Optional
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont
+from typing import List, Dict
 import logging
 
-from database_improved import DatabaseManager
+from database import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,8 @@ class MealSectionWidget(QGroupBox):
     def setup_ui(self):
         """Setup the user interface."""
         layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
         
         # Header with total calories
         header_layout = QHBoxLayout()
@@ -97,8 +99,15 @@ class MealSectionWidget(QGroupBox):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
+        # Set row height to accommodate widgets properly
+        self.meals_table.verticalHeader().setDefaultSectionSize(40)
         self.meals_table.setAlternatingRowColors(True)
         self.meals_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        
+        # Set minimum row height and ensure proper spacing
+        self.meals_table.setMinimumHeight(200)
+        self.meals_table.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        self.meals_table.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
         
         layout.addWidget(self.meals_table)
         
@@ -129,14 +138,16 @@ class MealSectionWidget(QGroupBox):
         meal_combo.setEditable(True)
         meal_combo.addItems(self.meal_options)
         meal_combo.setCurrentText("")
+        meal_combo.setMinimumHeight(30)
         meal_combo.currentTextChanged.connect(lambda: self.on_meal_changed(row))
-        meal_combo.textChanged.connect(lambda: self.search_meals(meal_combo))
+        meal_combo.editTextChanged.connect(lambda: self.search_meals(meal_combo))
         
         # Quantity spinbox
         quantity_spin = QSpinBox()
         quantity_spin.setRange(1, 10000)
         quantity_spin.setValue(100)
         quantity_spin.setSuffix(" g")
+        quantity_spin.setMinimumHeight(30)
         quantity_spin.valueChanged.connect(lambda: self.calculate_calories(row))
         
         # Calories label
